@@ -13,12 +13,12 @@ class ConsultasApp:
         
         # Configuración de la ventana
         self.root.title(f"Sistema de Consultas - {usuario}")
-        self.root.geometry("1100x650")  # Tamaño ligeramente reducido
+        self.root.geometry("1100x650")
         self.root.configure(bg='#f0f0f0')
         
-        # Estilos mejorados
+        # Estilos
         self.estilo = ttk.Style()
-        self.estilo.theme_use('clam')  # Tema más moderno
+        self.estilo.theme_use('clam')
         self.estilo.configure('TFrame', background='#f0f0f0')
         self.estilo.configure('TButton', font=('Arial', 10), padding=5, width=20)
         self.estilo.configure('TLabel', background='#f0f0f0', font=('Arial', 10))
@@ -37,44 +37,53 @@ class ConsultasApp:
             "2": ["Producto", "Valor", "Categoría", "Región"],
             "3": ["Categoría", "Margen Promedio"],
             "4": ["Vendedor", "Total Ventas", "N° Ventas", "Productos Vendidos"],
-            "5": ["Métrica", "Valor"]
+            "5": ["Métrica", "Valor"],
+            "6": ["Año", "Mes", "Total Ventas", "N° Ventas"],
+            "7": ["Producto", "Valor Total", "Margen Promedio", "Rentabilidad"],
+            "8": ["Región", "Total Gastos", "N° Gastos"],
+            "9": ["Vendedor", "Total Ventas", "Margen Promedio", "N° Ventas"],
+            "10": ["Día", "Total Ventas", "N° Ventas"]
         }
 
     def cargar_opciones_filtro(self):
-        """Carga opciones reales desde los datos"""
         if not self.consultas.df.empty:
             self.opciones_filtro = {
                 "1": ["Todas"] + sorted(self.consultas.df['Region'].dropna().unique().tolist()),
                 "2": ["Todas"] + sorted(self.consultas.df['Categoria'].dropna().unique().tolist()),
                 "3": ["Todas"] + sorted(self.consultas.df['Categoria'].dropna().unique().tolist()),
                 "4": ["Todas"] + sorted(self.consultas.df['Vendedor'].dropna().unique().tolist()),
-                "5": ["Todas"]  # No necesita filtro
+                "5": ["Todas"],
+                "6": ["Todas"] + sorted(self.consultas.df['Region'].dropna().unique().tolist()),
+                "7": ["Todas"] + sorted(self.consultas.df['Categoria'].dropna().unique().tolist()),
+                "8": ["Todas"] + sorted(self.consultas.df['Region'].dropna().unique().tolist()),
+                "9": ["Todas"] + sorted(self.consultas.df['Region'].dropna().unique().tolist()),
+                "10": ["Todas"] + sorted(self.consultas.df['Categoria'].dropna().unique().tolist())
             }
 
     def crear_interfaz(self):
-        # Frame principal con mejor distribución
         main_frame = ttk.Frame(self.root)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        # Panel izquierdo (controles) - Ancho fijo
         panel_controles = ttk.Frame(main_frame, width=250)
         panel_controles.pack(side=tk.LEFT, fill=tk.Y)
-        panel_controles.pack_propagate(False)  # Fija el ancho
+        panel_controles.pack_propagate(False)
         
-        # Panel derecho (resultados) - Flexible
         panel_resultados = ttk.Frame(main_frame)
         panel_resultados.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
         
-        # Título y controles
         ttk.Label(panel_controles, text="Consultas Disponibles", style='Header.TLabel').pack(pady=(10, 15))
         
-        # Botones de consultas con mejor espaciado
         consultas = [
             ("1. Ventas por Región", "1"),
             ("2. Top Productos", "2"),
             ("3. Margen por Categoría", "3"),
             ("4. Ventas por Vendedor", "4"),
-            ("5. Estadísticas", "5")
+            ("5. Estadísticas", "5"),
+            ("6. Ventas Mensuales", "6"),
+            ("7. Rentabilidad Productos", "7"),
+            ("8. Gastos por Región", "8"),
+            ("9. Eficiencia Vendedores", "9"),
+            ("10. Tendencia Diaria", "10")
         ]
         
         for texto, consulta_id in consultas:
@@ -86,7 +95,6 @@ class ConsultasApp:
             )
             btn.pack(fill=tk.X, pady=3, padx=5)
         
-        # Área de filtros reorganizada
         ttk.Separator(panel_controles).pack(fill=tk.X, pady=10)
         ttk.Label(panel_controles, text="Filtros", style='Header.TLabel').pack()
         
@@ -98,7 +106,6 @@ class ConsultasApp:
         self.filtro_combobox.pack(fill=tk.X, pady=3)
         self.filtro_combobox.bind("<<ComboboxSelected>>", self.aplicar_filtro)
         
-        # Área de resultados mejorada
         self.tree_frame = ttk.Frame(panel_resultados)
         self.tree_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
@@ -107,43 +114,35 @@ class ConsultasApp:
         self.tree_scroll_x = ttk.Scrollbar(self.tree_frame, orient="horizontal", command=self.tree.xview)
         self.tree.configure(yscrollcommand=self.tree_scroll_y.set, xscrollcommand=self.tree_scroll_x.set)
         
-        # Grid layout para mejor control
         self.tree.grid(row=0, column=0, sticky="nsew")
         self.tree_scroll_y.grid(row=0, column=1, sticky="ns")
         self.tree_scroll_x.grid(row=1, column=0, sticky="ew")
         self.tree_frame.grid_rowconfigure(0, weight=1)
         self.tree_frame.grid_columnconfigure(0, weight=1)
         
-        # Footer centrado
         ttk.Label(panel_controles, text=f"Usuario: {self.usuario}", style='Header.TLabel').pack(side=tk.BOTTOM, pady=10)
 
     def actualizar_filtros(self, consulta_id):
-        """Actualiza las opciones del combobox según la consulta seleccionada"""
         self.filtro_combobox['values'] = self.opciones_filtro.get(consulta_id, ["Todas"])
         self.filtro_combobox.set("Todas")
         self.consulta_actual = consulta_id
         self.aplicar_filtro()
 
     def aplicar_filtro(self, event=None):
-        """Aplica el filtro seleccionado"""
         if hasattr(self, 'consulta_actual'):
             filtro = self.filtro_combobox.get()
             filtro = None if filtro == "Todas" else filtro
             
-            # Limpiar tabla
             self.tree.delete(*self.tree.get_children())
             columnas = self.columnas_consulta.get(self.consulta_actual, [])
             self.tree["columns"] = columnas
             
-            # Configurar columnas
             for col in columnas:
                 self.tree.heading(col, text=col, anchor=tk.CENTER)
                 self.tree.column(col, width=120, anchor=tk.CENTER, stretch=True)
             
-            # Ejecutar consulta
             datos, titulo = self.consultas.obtener_consultas()[self.consulta_actual](filtro)
             
-            # Insertar datos
             for fila in datos:
                 self.tree.insert("", tk.END, values=fila)
             
